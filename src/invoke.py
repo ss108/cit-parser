@@ -40,6 +40,10 @@ def _get_model() -> AutoModelForTokenClassification:
     return model
 
 
+def _get_tokenizer() -> BertTokenizerFast:
+    return BertTokenizerFast.from_pretrained(Config.HF_MODEL_NAME)
+
+
 def split_text(text: str) -> list[str]:
     """
     Split text into sentences using spaCy.
@@ -51,7 +55,7 @@ def split_text(text: str) -> list[str]:
 
 
 def tokenize(text: str) -> dict[str, torch.Tensor]:
-    tokenizer = BertTokenizerFast.from_pretrained(Config.HF_MODEL_NAME)
+    tokenizer = _get_tokenizer()
     tokenized = tokenizer(
         text,
         add_special_tokens=True,
@@ -62,17 +66,14 @@ def tokenize(text: str) -> dict[str, torch.Tensor]:
         return_tensors="pt",
     )
     device = _get_device()
-    return {k: v.to(device) for k, v in tokenized.items()}
+    tokenized_on_device: dict[str, torch.Tensor] = {
+        k: v.to(device) for k, v in tokenized.items()
+    }
 
-
-async def invoke(text: str):
-    if Config.MODEL_URL:
-        ...
-
-    msg.info("No URL configured; using model locally")
-    text_chunks = split_text(text)
-    tokenized = [tokenize(chunk) for chunk in text_chunks]
-    return get_labels(tokenized[0])
+    # Log or print the tokenization details for debugging
+    tokens = tokenizer.convert_ids_to_tokens(tokenized["input_ids"][0])  # pyright: ignore
+    msg.info(f"Tokenized input: {tokens}")
+    return tokenized_on_device
 
 
 def get_labels(tokenized_text: dict[str, torch.Tensor]) -> list[str]:
@@ -82,8 +83,6 @@ def get_labels(tokenized_text: dict[str, torch.Tensor]) -> list[str]:
         output = model(**tokenized_text)  # pyright: ignore
 
     logits = output.logits
-    predictions = logits.argmax(dim=-1)
+    predictions = torch.argmax(logits, dim=-1)
     predicted_labels = [ALL_LABELS[p] for p in predictions[0].tolist()]
     return predicted_labels
-
-    # tokens = tokenizer.convert_ids_to_tokens(tokenized_input["input_ids"][0])  # pyright: ignore
