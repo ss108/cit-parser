@@ -52,7 +52,7 @@ def split_text(text: str) -> list[str]:
 
 def tokenize(text: str) -> dict[str, torch.Tensor]:
     tokenizer = BertTokenizerFast.from_pretrained(Config.HF_MODEL_NAME)
-    return tokenizer(
+    tokenized = tokenizer(
         text,
         add_special_tokens=True,
         padding="max_length",
@@ -61,6 +61,8 @@ def tokenize(text: str) -> dict[str, torch.Tensor]:
         return_attention_mask=True,
         return_tensors="pt",
     )
+    device = _get_device()
+    return {k: v.to(device) for k, v in tokenized.items()}
 
 
 async def invoke(text: str):
@@ -70,7 +72,7 @@ async def invoke(text: str):
     msg.info("No URL configured; using model locally")
     text_chunks = split_text(text)
     tokenized = [tokenize(chunk) for chunk in text_chunks]
-    print(tokenized)
+    return get_labels(tokenized[0])
 
 
 def get_labels(tokenized_text: dict[str, torch.Tensor]) -> list[str]:

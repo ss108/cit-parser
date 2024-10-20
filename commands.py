@@ -1,6 +1,8 @@
+import asyncio
+
 import typer
 
-from src.invoke import tokenize
+from src.invoke import invoke
 
 app = typer.Typer()
 
@@ -11,10 +13,15 @@ def hi():
 
 
 @app.command()
-def test_tokenization():
-    test_text = "heheheh hi"
-    res = tokenize(test_text)
+def test_invoke():
+    text = "Hello World. Cororo v. Yee, 515 U.S. 70 (1995)."
+    res = asyncio.run(invoke(text))
     print(res)
+
+
+# @app.command()
+# def test_tokenization():
+#     test
 
 
 if __name__ == "__main__":
