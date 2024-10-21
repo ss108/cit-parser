@@ -1,6 +1,6 @@
 import typer
 
-from src.invoke import get_labels, tokenize
+from src.invoke import invoke
 
 app = typer.Typer()
 
@@ -10,19 +10,10 @@ def hi():
     typer.echo("Hello World")
 
 
-# @app.command()
-# def test_invoke():
-#     text = "Hello World. Cororo v. Yee, 515 U.S. 70 (1995). 18 U.S.C. Sec 87"
-#     res = asyncio.run(invoke(text))
-#     print(res)
-
-
 @app.command()
-def test_tokenization():
+def test():
     text = "Hello World. Cororo v. Yee, 515 U.S. 70 (1995). 18 U.S.C. Sec 87"
-    res = tokenize(text)
-
-    res = get_labels(res)
+    res = invoke(text)
     print(res)
 
 

@@ -1,17 +1,19 @@
 from functools import lru_cache
+from typing import Dict, List
 
 import spacy
 import torch
-from transformers import AutoModelForTokenClassification, BertTokenizerFast
+from transformers import (
+    AutoModelForTokenClassification,
+    AutoTokenizer,
+    PreTrainedTokenizerFast,
+)
 from wasabi import msg
 
 from src.config import Config
 from src.constants import ALL_LABELS
 
-
-@lru_cache(maxsize=1)
-def _nlp():
-    return spacy.load("en_core_web_sm")
+from .types import LabelPrediction
 
 
 def _get_device() -> torch.device:
@@ -31,58 +33,107 @@ def _get_device() -> torch.device:
     return device
 
 
+DEVICE = _get_device()
+
+
+@lru_cache(maxsize=1)
+def _nlp():
+    try:
+        return spacy.load("en_core_web_sm")
+    except OSError:
+        msg.fail(
+            "SpaCy model 'en_core_web_sm' not found. Please run `python -m spacy download en_core_web_sm`."
+        )
+        raise
+
+
 @lru_cache(maxsize=1)
 def _get_model() -> AutoModelForTokenClassification:
+    """
+    Loads the model from the pretrained Hugging Face repository and moves it to the appropriate device.
+    """
     model = AutoModelForTokenClassification.from_pretrained(Config.HF_MODEL_NAME)
-    device = _get_device()
-    model.to(device)
+    model.to(DEVICE)
     model.eval()
+    msg.info(f"Model '{Config.HF_MODEL_NAME}' loaded and moved to {DEVICE}.")
     return model
 
 
-def _get_tokenizer() -> BertTokenizerFast:
-    return BertTokenizerFast.from_pretrained(Config.HF_MODEL_NAME)
-
-
-def split_text(text: str) -> list[str]:
+@lru_cache(maxsize=1)
+def _get_tokenizer() -> PreTrainedTokenizerFast:
     """
-    Split text into sentences using spaCy.
+    Loads the tokenizer from the pretrained Hugging Face repository.
+    """
+    tokenizer = AutoTokenizer.from_pretrained(Config.HF_MODEL_NAME)
+    assert isinstance(
+        tokenizer, PreTrainedTokenizerFast
+    ), "Tokenizer is not a PreTrainedTokenizerFast instance."
+    msg.info(f"Tokenizer for '{Config.HF_MODEL_NAME}' loaded.")
+    return tokenizer
+
+
+def split_text(text: str) -> List[str]:
+    """
+    Splits the input text into sentences using spaCy.
     """
     nlp = _nlp()
     doc = nlp(text)
-    sentences: list[str] = [sent.text for sent in doc.sents]
+    sentences: List[str] = [sent.text for sent in doc.sents]
+    msg.info(f"Text split into {len(sentences)} sentence(s).")
     return sentences
 
 
-def tokenize(text: str) -> dict[str, torch.Tensor]:
-    tokenizer = _get_tokenizer()
-    tokenized = tokenizer(
-        text,
-        add_special_tokens=True,
-        padding="max_length",
-        truncation=True,
-        max_length=512,
-        return_attention_mask=True,
+def invoke(text: str) -> List[LabelPrediction]:
+    model = _get_model()
+    sentences = split_text(text)
+    res = []
+    for sentence in sentences:
+        predictions = infer_labels(sentence, model)
+        res.extend(predictions)
+    return res
+
+
+def tokenize(s: str) -> Dict[str, torch.Tensor]:
+    tokenizer: PreTrainedTokenizerFast = _get_tokenizer()
+    tokenized_input = tokenizer(
+        s,
         return_tensors="pt",
-    )
-    device = _get_device()
-    tokenized_on_device: dict[str, torch.Tensor] = {
-        k: v.to(device) for k, v in tokenized.items()
+        padding=True,
+    )  # pyright: ignore
+    tokenized_input: Dict[str, torch.Tensor] = {
+        k: v.to(DEVICE) for k, v in tokenized_input.items()
     }
 
-    # Log or print the tokenization details for debugging
-    tokens = tokenizer.convert_ids_to_tokens(tokenized["input_ids"][0])  # pyright: ignore
-    msg.info(f"Tokenized input: {tokens}")
-    return tokenized_on_device
+    # tokens = tokenizer.convert_ids_to_tokens(tokenized_input["input_ids"][0])  # pyright: ignore
+    # msg.info(f"Tokenized input: {tokens}")
+    return tokenized_input
 
 
-def get_labels(tokenized_text: dict[str, torch.Tensor]) -> list[str]:
-    model = _get_model()
+def infer_labels(
+    text: str, model: AutoModelForTokenClassification
+) -> List[LabelPrediction]:
+    """
+    Tokenizes the text, performs inference with the model, and returns predicted labels.
+    """
+    tokenizer: PreTrainedTokenizerFast = _get_tokenizer()
+    tokenized_input = tokenize(text)
+
+    model.to(DEVICE)  # pyright: ignore
+    model.eval()  # pyright: ignore
 
     with torch.no_grad():
-        output = model(**tokenized_text)  # pyright: ignore
+        outputs = model(**tokenized_input)  # pyright: ignore
+        logits = outputs.logits
+        predictions = torch.argmax(logits, dim=-1)
 
-    logits = output.logits
-    predictions = torch.argmax(logits, dim=-1)
     predicted_labels = [ALL_LABELS[p] for p in predictions[0].tolist()]
-    return predicted_labels
+    tokens = tokenizer.convert_ids_to_tokens(tokenized_input["input_ids"][0])  # pyright: ignore
+
+    res = []
+    raw_pairs = []
+    for token, label in zip(tokens, predicted_labels):
+        raw_pairs.append((token, label))
+        p = LabelPrediction(token=token, label=label)
+        res.append(p)
+
+    return res
