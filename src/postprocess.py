@@ -1,7 +1,37 @@
 import string
 from typing import List, Optional
 
-from .types import LabelPrediction
+from .types import CaselawCitation, ICitation, LabelPrediction, StatuteCitation
+
+
+def labels_to_cit(labels: List[LabelPrediction]) -> Optional[ICitation]:
+    entities = aggregate_entities(labels)
+
+    if is_caselaw_citation(entities):
+        return CaselawCitation.from_token_label_pairs(entities)
+    elif is_statute_citation(entities):
+        return StatuteCitation.from_token_label_pairs(entities)
+    else:
+        return None
+
+
+# Neither of the below seem good, but there is basically no mainstream language that offers a good way of declaratively handling this kind of thing (but I think can be done in Idris?)
+def is_caselaw_citation(entities: List[LabelPrediction]) -> bool:
+    """
+    Determines if the given combination of labels constitute a caselaw citation.
+    """
+    has_case_name = any(e.label == "CASE_NAME" for e in entities)
+    has_volume = any(e.label == "VOLUME" for e in entities)
+    has_reporter = any(e.label == "REPORTER" for e in entities)
+    return has_case_name and (has_volume or has_reporter)
+
+
+def is_statute_citation(entities: List[LabelPrediction]) -> bool:
+    """
+    Determines if the given combination of labels constitute a statute citation.
+    """
+    has_section = any(e.label == "SECTION" for e in entities)
+    return has_section
 
 
 def aggregate_entities(labels: List[LabelPrediction]) -> List[LabelPrediction]:

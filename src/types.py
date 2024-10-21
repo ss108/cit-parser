@@ -215,12 +215,10 @@ class StatuteCitation(BaseModel):
             elif label == "YEAR" and token.isdigit():
                 year = int(token)
 
-        # Trim whitespace from the extracted fields
         title = title.strip() or None
         code = code.strip() or None
         section = section.strip()
 
-        # Validate that the required field 'section' is present
         if not section:
             return None
 

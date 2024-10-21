@@ -1,5 +1,5 @@
 from functools import lru_cache
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import spacy
 import torch
@@ -12,8 +12,9 @@ from wasabi import msg
 
 from src.config import Config
 from src.constants import ALL_LABELS
+from src.postprocess import labels_to_cit
 
-from .types import LabelPrediction
+from .types import ICitation, LabelPrediction
 
 
 def _get_device() -> torch.device:
@@ -83,13 +84,15 @@ def split_text(text: str) -> List[str]:
     return sentences
 
 
-def invoke(text: str) -> List[LabelPrediction]:
+def invoke(text: str) -> List[ICitation]:
     model = _get_model()
     sentences = split_text(text)
     res = []
     for sentence in sentences:
         predictions = infer_labels(sentence, model)
-        res.extend(predictions)
+        cit: Optional[ICitation] = labels_to_cit(predictions)
+        if cit:
+            res.append(cit)
     return res
 
 
