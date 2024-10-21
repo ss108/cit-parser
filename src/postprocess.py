@@ -13,16 +13,16 @@ from .types import (
 def labels_to_cit(labels: List[LabelPrediction]) -> Optional[Citation]:
     entities = aggregate_entities(labels)
 
-    if is_caselaw_citation(entities):
+    if _is_caselaw_citation(entities):
         return CaselawCitation.from_token_label_pairs(entities)
-    elif is_statute_citation(entities):
+    elif _is_statute_citation(entities):
         return StatuteCitation.from_token_label_pairs(entities)
     else:
         return None
 
 
 # Neither of the below seem good, but there is basically no mainstream language that offers a good way of declaratively and succinctly handling this kind of thing
-def is_caselaw_citation(entities: List[LabelPrediction]) -> bool:
+def _is_caselaw_citation(entities: List[LabelPrediction]) -> bool:
     """
     Determines if the given combination of labels constitute a caselaw citation.
     """
@@ -32,7 +32,7 @@ def is_caselaw_citation(entities: List[LabelPrediction]) -> bool:
     return has_case_name and (has_volume or has_reporter)
 
 
-def is_statute_citation(entities: List[LabelPrediction]) -> bool:
+def _is_statute_citation(entities: List[LabelPrediction]) -> bool:
     """
     Determines if the given combination of labels constitute a statute citation.
     """
@@ -109,7 +109,14 @@ def aggregate_entities(labels: List[LabelPrediction]) -> List[LabelPrediction]:
                     else:
                         current_entity_tokens.append(" " + token)
                 else:
-                    current_entity_tokens.append(token)
+                    # If token is a single uppercase letter and previous token ends with a digit, add a space
+                    if (
+                        current_entity_tokens
+                        and current_entity_tokens[-1][-1].isdigit()
+                    ):
+                        current_entity_tokens.append(" " + token)
+                    else:
+                        current_entity_tokens.append(token)
 
             # Update the start and end positions
             if current_start is not None:
@@ -157,4 +164,5 @@ def aggregate_entities(labels: List[LabelPrediction]) -> List[LabelPrediction]:
 
 
 def organize(cits: List[Citation]) -> Authorities:
+    print(f"Organizing {cits}")
     return Authorities.construct(cits)

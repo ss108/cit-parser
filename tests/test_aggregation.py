@@ -164,6 +164,39 @@ def test_aggregate_entities_statute(
                 LabelPrediction(token="2009", label="YEAR", start=34, end=38),
             ],
         ),
+        (
+            [
+                LabelPrediction(token="Smith", label="B-CASE_NAME", start=0, end=5),
+                LabelPrediction(token="v.", label="I-CASE_NAME", start=6, end=8),
+                LabelPrediction(token="Jones", label="I-CASE_NAME", start=9, end=14),
+                LabelPrediction(token=",", label="O", start=15, end=15),
+                LabelPrediction(token="456", label="B-VOLUME", start=16, end=19),
+                LabelPrediction(token="F", label="B-REPORTER", start=20, end=21),
+                LabelPrediction(token=".", label="I-REPORTER", start=21, end=21),
+                LabelPrediction(token="2", label="I-REPORTER", start=22, end=23),
+                LabelPrediction(token="d", label="I-REPORTER", start=23, end=24),
+                LabelPrediction(token="789", label="B-PAGE", start=25, end=28),
+                LabelPrediction(token=",", label="O", start=29, end=29),
+                LabelPrediction(token="792", label="B-PIN", start=30, end=33),
+                LabelPrediction(token="(", label="O", start=34, end=34),
+                LabelPrediction(token="2d", label="B-COURT", start=35, end=38),
+                LabelPrediction(token="C", label="I-COURT", start=35, end=38),
+                LabelPrediction(token="##ir", label="I-COURT", start=35, end=38),
+                LabelPrediction(token="1983", label="B-YEAR", start=39, end=43),
+                LabelPrediction(token=")", label="O", start=44, end=44),
+            ],
+            [
+                LabelPrediction(
+                    token="Smith v. Jones", label="CASE_NAME", start=0, end=14
+                ),
+                LabelPrediction(token="456", label="VOLUME", start=16, end=19),
+                LabelPrediction(token="F.2d", label="REPORTER", start=20, end=24),
+                LabelPrediction(token="789", label="PAGE", start=25, end=28),
+                LabelPrediction(token="792", label="PIN", start=30, end=33),
+                LabelPrediction(token="2d Cir", label="COURT", start=35, end=38),
+                LabelPrediction(token="1983", label="YEAR", start=39, end=43),
+            ],
+        ),
     ],
 )
 def test_aggregate_entities_caselaw(

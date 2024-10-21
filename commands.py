@@ -1,6 +1,7 @@
 import typer
 
 from src.invoke import invoke
+from src.postprocess import organize
 
 app = typer.Typer()
 
@@ -12,9 +13,11 @@ def hi():
 
 @app.command()
 def test():
-    text = "The Elusive Cat contended, with claws unsheathed, that the aforementioned Mischievous Dog had engaged in “continuous and unrepentant disruption of peace,” citing Paws v. Claws, 377 F.3d 82 (2019). The respondent, The Mischievous Dog, in a counter-claim, referenced Bone v. Squeaky Toy, U.S. 302 (2020), arguing that “an occasional bark falls within the scope of a canine’s natural rights.”"
+    text = "The Plaintiff contends that the Defendant’s actions constituted a breach of fiduciary duty, as set forth in Smith v. Jones, 456 F.2d 789, 792 (2d Cir. 1983). In Smith, the court held that a fiduciary is required to act with the utmost good faith and loyalty towards the party they represent. This principle has been reaffirmed in subsequent cases, including Doe v. Roe, 512 U.S. 234, 238 (Brr. 1994), where the Supreme Court emphasized that any conflict of interest must be fully disclosed to the beneficiary. Accordingly, there is no genuine issue of material fact regarding the Defendant’s failure to disclose such conflicts, and summary judgment is appropriate."
     res = invoke(text)
-    print(res)
+
+    authorities = organize(res)
+    print(authorities)
 
 
 if __name__ == "__main__":

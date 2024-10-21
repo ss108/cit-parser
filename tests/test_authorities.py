@@ -139,7 +139,6 @@ def test_authorities_construct(
     expected_caselaw,
 ):
     result = Authorities.construct(citations)
-    print(result)
     assert result.statutes == expected_statutes
     assert result.caselaw == expected_caselaw
 
