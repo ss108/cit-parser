@@ -1,10 +1,16 @@
 import string
 from typing import List, Optional
 
-from .types import CaselawCitation, ICitation, LabelPrediction, StatuteCitation
+from .types import (
+    Authorities,
+    CaselawCitation,
+    Citation,
+    LabelPrediction,
+    StatuteCitation,
+)
 
 
-def labels_to_cit(labels: List[LabelPrediction]) -> Optional[ICitation]:
+def labels_to_cit(labels: List[LabelPrediction]) -> Optional[Citation]:
     entities = aggregate_entities(labels)
 
     if is_caselaw_citation(entities):
@@ -15,7 +21,7 @@ def labels_to_cit(labels: List[LabelPrediction]) -> Optional[ICitation]:
         return None
 
 
-# Neither of the below seem good, but there is basically no mainstream language that offers a good way of declaratively handling this kind of thing (but I think can be done in Idris?)
+# Neither of the below seem good, but there is basically no mainstream language that offers a good way of declaratively and succinctly handling this kind of thing
 def is_caselaw_citation(entities: List[LabelPrediction]) -> bool:
     """
     Determines if the given combination of labels constitute a caselaw citation.
@@ -148,3 +154,7 @@ def aggregate_entities(labels: List[LabelPrediction]) -> List[LabelPrediction]:
         )
 
     return aggregated
+
+
+def organize(cits: List[Citation]) -> Authorities:
+    return Authorities.construct(cits)

@@ -1,14 +1,28 @@
 from __future__ import annotations
 
-from typing import List, Optional, Protocol, Tuple, TypeAlias
+from enum import Enum
+from typing import Dict, List, Optional, Protocol, Tuple, TypeAlias, Union
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 PIN_CITE: TypeAlias = Tuple[int, Optional[int]]
 SPAN: TypeAlias = Tuple[int, int]
 
 
-class LabelPrediction(BaseModel):
+class _Base_(BaseModel):
+    model_config = ConfigDict(
+        frozen=True,
+        arbitrary_types_allowed=True,
+        use_enum_values=True,
+    )
+
+
+class CitationType(str, Enum):
+    OPINION = "opinion"
+    STATUTE = "statute"
+
+
+class LabelPrediction(_Base_):
     token: str
     label: str
     start: int
@@ -26,6 +40,7 @@ class LabelPrediction(BaseModel):
 class ICitation(Protocol):
     start: int
     end: int
+    type: CitationType
 
     @classmethod
     def from_token_label_pairs(
@@ -42,8 +57,12 @@ class ICitation(Protocol):
 
     def __eq__(self, other: object) -> bool: ...
 
+    def __str__(self) -> str: ...
 
-class CaselawCitation(BaseModel):
+
+class CaselawCitation(_Base_):
+    citation_type: CitationType = CitationType.OPINION
+
     case_name: str
     volume: Optional[int] = None
     reporter: Optional[str] = None
@@ -58,6 +77,19 @@ class CaselawCitation(BaseModel):
     @property
     def span(self) -> SPAN:
         return self.start, self.end
+
+    @property
+    def is_full(self) -> bool:
+        return all(
+            [
+                self.case_name,
+                self.volume,
+                self.reporter,
+                self.starting_page,
+                self.court,
+                self.year,
+            ]
+        )
 
     @property
     def full_text(self) -> str:
@@ -80,6 +112,9 @@ class CaselawCitation(BaseModel):
             components.append(f"({parens_content})")
 
         return " ".join(components)
+
+    def __str__(self) -> str:
+        return self.full_text
 
     @classmethod
     def from_token_label_pairs(
@@ -138,23 +173,24 @@ class CaselawCitation(BaseModel):
         )
 
     def __hash__(self) -> int:
-        return hash((self.case_name, self.volume, self.reporter, self.start, self.end))
+        return hash((self.volume, self.reporter, self.starting_page))
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, CaselawCitation):
             return False
+
         return (
-            self.case_name == other.case_name
-            and self.volume == other.volume
+            self.volume == other.volume
             and self.reporter == other.reporter
             and self.starting_page == other.starting_page
-            and self.raw_pin_cite == other.raw_pin_cite
             and self.court == other.court
             and self.year == other.year
         )
 
 
-class StatuteCitation(BaseModel):
+class StatuteCitation(_Base_):
+    citation_type: CitationType = CitationType.STATUTE
+
     title: Optional[str] = None
     code: Optional[str] = None
     section: str
@@ -180,6 +216,9 @@ class StatuteCitation(BaseModel):
             components.append(f"({self.year})")
 
         return " ".join(components)
+
+    def __str__(self) -> str:
+        return self.full_text
 
     @classmethod
     def from_token_label_pairs(
@@ -232,7 +271,7 @@ class StatuteCitation(BaseModel):
         )
 
     def __hash__(self) -> int:
-        return hash((self.title, self.code, self.section, self.start, self.end))
+        return hash((self.title, self.code, self.section))
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, StatuteCitation):
@@ -243,3 +282,27 @@ class StatuteCitation(BaseModel):
             and self.section == other.section
             and self.year == other.year
         )
+
+
+Citation: TypeAlias = Union[CaselawCitation, StatuteCitation]
+
+
+class Authorities(_Base_):
+    statutes: Dict[StatuteCitation, List[StatuteCitation]] = dict()
+    caselaw: Dict[CaselawCitation, List[CaselawCitation]] = dict()
+
+    @classmethod
+    def construct(cls, citations: List[Citation]) -> Authorities:
+        statutes = {}
+        caselaw = {}
+
+        for citation in citations:
+            if isinstance(citation, StatuteCitation):
+                statutes.setdefault(citation, []).append(citation)
+            elif isinstance(citation, CaselawCitation):
+                caselaw.setdefault(citation, []).append(citation)
+
+        return cls(statutes=statutes, caselaw=caselaw)
+
+    def __str__(self) -> str:
+        return f"Statutes: {self.statutes}\nCaselaw: {self.caselaw}"

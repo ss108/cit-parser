@@ -14,7 +14,7 @@ from src.config import Config
 from src.constants import ALL_LABELS
 from src.postprocess import labels_to_cit
 
-from .types import ICitation, LabelPrediction
+from .types import Citation, LabelPrediction
 
 
 def _get_device() -> torch.device:
@@ -84,13 +84,13 @@ def split_text(text: str) -> List[str]:
     return sentences
 
 
-def invoke(text: str) -> List[ICitation]:
+def invoke(text: str) -> List[Citation]:
     model = _get_model()
     sentences = split_text(text)
     res = []
     for sentence in sentences:
         predictions = infer_labels(sentence, model)
-        cit: Optional[ICitation] = labels_to_cit(predictions)
+        cit: Optional[Citation] = labels_to_cit(predictions)
         if cit:
             res.append(cit)
     return res
