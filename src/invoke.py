@@ -124,7 +124,12 @@ def infer_labels(
     tokenized_input = tokenizer(
         text, return_offsets_mapping=True, truncation=True, return_tensors="pt"
     )
-    offset_mapping = tokenized_input.pop("offset_mapping")[0]
+
+    # Extract offset mapping before moving tensors to device
+    offset_mapping = tokenized_input.pop("offset_mapping")[0].tolist()
+
+    # Move input tensors to the same device as the model
+    tokenized_input = {k: v.to(DEVICE) for k, v in tokenized_input.items()}
 
     model.to(DEVICE)  # pyright: ignore
     model.eval()  # pyright: ignore
@@ -135,14 +140,12 @@ def infer_labels(
         predictions = torch.argmax(logits, dim=-1)
 
     predicted_labels = [ALL_LABELS[p] for p in predictions[0].tolist()]
-    tokens = tokenizer.convert_ids_to_tokens(tokenized_input["input_ids"][0])  # pyright: ignore
+    tokens = tokenizer.convert_ids_to_tokens(tokenized_input["input_ids"][0])
 
     res = []
     raw_pairs = []
 
-    for token, label, (start, end) in zip(
-        tokens, predicted_labels, offset_mapping.tolist()
-    ):
+    for token, label, (start, end) in zip(tokens, predicted_labels, offset_mapping):
         if token in ["[CLS]", "[SEP]", "[PAD]"] or label == "O" or start == end:
             continue
 
