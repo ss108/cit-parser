@@ -24,15 +24,6 @@ cit-parser relies on spaCy’s en_core_web_sm model for sentence segmentation. Y
 python -m spacy download en_core_web_sm
 
 
-__Verify the Installation:__
-You can verify that the model is installed correctly by running:
-
-python -c "import spacy; nlp = spacy.load('en_core_web_sm'); print('spaCy model loaded successfully!')"
-
-If the model is installed correctly, you should see:
-
-spaCy model loaded successfully!
-
 
 ## Usage
 
@@ -44,3 +35,7 @@ from cit_parser import parse
 
 # Sample text with legal citations
 text = "In the landmark case of 410 U.S. 113 (1973), the Supreme Court established..."
+
+## Development
+1. Install `uv` package manager
+2. Install `pre-commit`

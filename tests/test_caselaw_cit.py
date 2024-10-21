@@ -99,3 +99,102 @@ def test_from_token_label_pairs(
 ):
     result = CaselawCitation.from_token_label_pairs(token_label_pairs)
     assert result == expected
+
+
+@pytest.mark.parametrize(
+    ["cit1", "cit2", "res"],
+    [
+        (
+            CaselawCitation(
+                case_name="hi",
+                volume=1,
+                reporter="some.reporter",
+                starting_page=1,
+                year=1990,
+                start=1,
+                end=1,
+            ),
+            CaselawCitation(
+                case_name="case name does not matter",
+                volume=1,
+                reporter="some.reporter",
+                starting_page=1,
+                year=1990,
+                start=11,
+                end=15,
+            ),
+            True,
+        ),
+        (
+            CaselawCitation(
+                case_name="Ppl v. Doe",
+                volume=56,
+                reporter="Crim. L. Enjoyers",
+                starting_page=11,
+                year=1991,
+                court="NY App. Div.",
+                start=1,
+                end=1,
+            ),
+            CaselawCitation(
+                case_name="case name does not matter",
+                volume=56,
+                reporter="Crim. L. Enjoyers",
+                starting_page=11,
+                year=1991,
+                court="NY App. Div.",
+                start=11,
+                end=15,
+            ),
+            True,
+        ),
+        (
+            CaselawCitation(
+                case_name="year matters",
+                volume=56,
+                reporter="Crim. L. Enjoyers",
+                starting_page=11,
+                year=2001,
+                court="NY App. Div.",
+                start=1,
+                end=1,
+            ),
+            CaselawCitation(
+                case_name="case name does not matter",
+                volume=56,
+                reporter="Crim. L. Enjoyers",
+                starting_page=11,
+                year=1021,
+                court="NY App. Div.",
+                start=11,
+                end=15,
+            ),
+            False,
+        ),
+        (
+            CaselawCitation(
+                case_name="People v. Wuncler",
+                volume=56,
+                reporter="Crim. L. Enjoyers",
+                starting_page=11,
+                year=2001,
+                court="U.S.",
+                start=1,
+                end=1,
+            ),
+            CaselawCitation(
+                case_name="People v. Wuncler",
+                volume=56,
+                reporter="Crim. L. Enjoyers",
+                starting_page=11,
+                year=2001,
+                court="M.D.",
+                start=1,
+                end=1,
+            ),
+            False,
+        ),
+    ],
+)
+def test_eq(cit1: CaselawCitation, cit2: CaselawCitation, res: bool):
+    assert (cit1 == cit2) == res

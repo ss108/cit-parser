@@ -1,6 +1,7 @@
 import typer
 
 from src.invoke import invoke
+from src.postprocess import organize
 
 app = typer.Typer()
 
@@ -12,9 +13,13 @@ def hi():
 
 @app.command()
 def test():
-    text = "Why speculate? Brown v. Board of Education of Topeka, 347 U.S. 483 (1954)"
+    text = "The Plaintiff contends that the Defendant’s actions constituted a breach of fiduciary duty, as set forth in Smith v. Jones, 456 F.2d 789, 792 (2d Cir. 1983). In Smith, the court held that a fiduciary is required to act with the utmost good faith and loyalty towards the party they represent. This principle has been reaffirmed in subsequent cases, including Doe v. Roe, 512 U.S. 234, 238 (Brr. 1994), where the Supreme Court emphasized that any conflict of interest must be fully disclosed to the beneficiary. Accordingly, there is no genuine issue of material fact regarding the Defendant’s failure to disclose such conflicts, and summary judgment is appropriate."
     res = invoke(text)
-    print(res)
+
+    authorities = organize(res)
+
+    for x in authorities.caselaw:
+        print(x.full_text)
 
 
 if __name__ == "__main__":
