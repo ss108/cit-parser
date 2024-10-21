@@ -12,7 +12,7 @@ def hi():
 
 @app.command()
 def test():
-    text = "Jojo, 45 F.3d at 87. Yeah, tha"
+    text = "Why speculate? Brown v. Board of Education of Topeka, 347 U.S. 483 (1954)"
     res = invoke(text)
     print(res)
 
