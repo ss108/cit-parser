@@ -12,7 +12,7 @@ def hi():
 
 @app.command()
 def test():
-    text = "Why speculate? Brown v. Board of Education of Topeka, 347 U.S. 483 (1954)"
+    text = "The Elusive Cat contended, with claws unsheathed, that the aforementioned Mischievous Dog had engaged in “continuous and unrepentant disruption of peace,” citing Paws v. Claws, 377 F.3d 82 (2019). The respondent, The Mischievous Dog, in a counter-claim, referenced Bone v. Squeaky Toy, U.S. 302 (2020), arguing that “an occasional bark falls within the scope of a canine’s natural rights.”"
     res = invoke(text)
     print(res)
 

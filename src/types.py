@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Dict, List, Optional, Protocol, Tuple, TypeAlias, Union
+from typing import Dict, List, Literal, Optional, Protocol, Tuple, TypeAlias, Union
 
 from pydantic import BaseModel, ConfigDict
 
@@ -61,7 +61,7 @@ class ICitation(Protocol):
 
 
 class CaselawCitation(_Base_):
-    citation_type: CitationType = CitationType.OPINION
+    citation_type: Literal[CitationType.OPINION] = CitationType.OPINION
 
     case_name: str
     volume: Optional[int] = None
@@ -204,6 +204,10 @@ class StatuteCitation(_Base_):
         return self.start, self.end
 
     @property
+    def is_full(self) -> bool:
+        return all([self.code, self.section])
+
+    @property
     def full_text(self) -> str:
         components = []
         if self.title:
@@ -271,11 +275,12 @@ class StatuteCitation(_Base_):
         )
 
     def __hash__(self) -> int:
-        return hash((self.title, self.code, self.section))
+        return hash((self.code, self.section))
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, StatuteCitation):
             return False
+
         return (
             self.title == other.title
             and self.code == other.code
@@ -296,11 +301,39 @@ class Authorities(_Base_):
         statutes = {}
         caselaw = {}
 
-        for citation in citations:
-            if isinstance(citation, StatuteCitation):
-                statutes.setdefault(citation, []).append(citation)
-            elif isinstance(citation, CaselawCitation):
-                caselaw.setdefault(citation, []).append(citation)
+        # Separate full and short citations
+        full_citations = [c for c in citations if c.is_full]
+        short_citations = [c for c in citations if not c.is_full]
+
+        # Create the dictionary for full citations first.
+        for full_citation in full_citations:
+            if isinstance(full_citation, CaselawCitation):
+                caselaw.setdefault(full_citation, []).append(full_citation)
+            elif isinstance(full_citation, StatuteCitation):
+                statutes.setdefault(full_citation, []).append(full_citation)
+
+        # Map short citations to the appropriate full citation.
+        for short_citation in short_citations:
+            if isinstance(short_citation, CaselawCitation):
+                # Find a matching full citation.
+                for full_citation in caselaw:
+                    if (
+                        full_citation.case_name == short_citation.case_name
+                        and full_citation.volume == short_citation.volume
+                        and full_citation.reporter == short_citation.reporter
+                        and full_citation.starting_page == short_citation.starting_page
+                    ):
+                        caselaw[full_citation].append(short_citation)
+                        break
+            elif isinstance(short_citation, StatuteCitation):
+                # Statutes mapping logic could be similar.
+                for full_citation in statutes:
+                    if (
+                        full_citation.section == short_citation.section
+                        and full_citation.code == short_citation.code
+                    ):
+                        statutes[full_citation].append(short_citation)
+                        break
 
         return cls(statutes=statutes, caselaw=caselaw)
 
