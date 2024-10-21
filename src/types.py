@@ -319,17 +319,15 @@ class Authorities(BaseModel):
         for full_citation in full_citations:
             if full_citation.citation_type == CitationType.OPINION:
                 caselaw.setdefault(full_citation, []).append(full_citation)
-            elif full_citation.citation_type == CitationType.STATUTE:
-                statutes.setdefault(full_citation, []).append(full_citation)
+            # elif full_citation.citation_type == CitationType.STATUTE:
+            #     statutes.setdefault(full_citation, []).append(full_citation)
 
         for short_citation in short_citations:
             if short_citation.citation_type == CitationType.OPINION:
                 for full_citation in caselaw:
                     if (
-                        full_citation.case_name == short_citation.case_name
-                        and full_citation.volume == short_citation.volume
+                        full_citation.volume == short_citation.volume
                         and full_citation.reporter == short_citation.reporter
-                        and full_citation.starting_page == short_citation.starting_page
                     ):
                         caselaw[full_citation].append(short_citation)
                         break
