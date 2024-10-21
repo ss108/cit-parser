@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional, Protocol, Tuple, TypeAlias
+from typing import List, Optional, Protocol, Tuple, TypeAlias
 
 from pydantic import BaseModel
 
@@ -41,50 +41,59 @@ class LabelPrediction(BaseModel):
         return f"{self.token}: {self.label}"
 
 
-# class CaselawCitation(BaseModel):
-#     case_name: str
-#     volume: Optional[int] = None
-#     reporter: str
-#     starting_page: Optional[int] = None
-#     raw_pin_cite: Optional[str] = None
-#     court: Optional[str] = None
-#     year: Optional[int] = None
+class CaselawCitation(BaseModel):
+    case_name: str
+    volume: Optional[int] = None
+    reporter: Optional[str] = None
+    starting_page: Optional[int] = None
+    raw_pin_cite: Optional[str] = None
+    court: Optional[str] = None
+    year: Optional[int] = None
 
-#     @classmethod
-#     def from_token_label_pairs(
-#         cls, token_label_pairs: List[LabelPrediction]
-#     ) -> Optional[CaselawCitation]:
-#         # data = cls()
-#         case_name = ""
-#         reporter = ""
-#         for pair in token_label_pairs:
-#             token = pair.token.replace("##", "")
-#             label = pair.label
+    @classmethod
+    def from_token_label_pairs(
+        cls, token_label_pairs: List[LabelPrediction]
+    ) -> Optional[CaselawCitation]:
+        # Initialize fields
+        case_name = ""
+        reporter = ""
+        volume = None
+        starting_page = None
+        raw_pin_cite = None
+        court = None
+        year = None
 
-#             if label == "CASE_NAME":
-#                 data.case_name += token + " "
-#             elif label == "VOLUME":
-#                 if token.isdigit():
-#                     data.volume = int(token)
-#             elif label == "REPORTER":
-#                 data.reporter += token + " "
-#             elif label == "PAGE":
-#                 if token.isdigit():
-#                     data.starting_page = int(token)
-#             elif label == "PIN":
-#                 data.raw_pin_cite = token
-#             elif label == "COURT":
-#                 data.court = token
-#             elif label == "YEAR":
-#                 if token.isdigit():
-#                     data.year = int(token)
+        for pair in token_label_pairs:
+            token = pair.token
+            label = pair.label
 
-#         # Trim whitespace
-#         data.case_name = data.case_name.strip()
-#         data.reporter = data.reporter.strip()
+            if label == "CASE_NAME":
+                case_name += token + " "
+            elif label == "VOLUME" and token.isdigit():
+                volume = int(token)
+            elif label == "REPORTER":
+                reporter += token + " "
+            elif label == "PAGE" and token.isdigit():
+                starting_page = int(token)
+            elif label == "PIN":
+                raw_pin_cite = token
+            elif label == "COURT":
+                court = token
+            elif label == "YEAR" and token.isdigit():
+                year = int(token)
 
-#         # Validate required fields
-#         if not data.case_name or not data.volume or not data.reporter:
-#             return None
+        case_name = case_name.strip()
+        reporter = reporter.strip()
 
-#         return data
+        if not case_name:
+            return None
+
+        return cls(
+            case_name=case_name,
+            volume=volume,
+            reporter=reporter or None,
+            starting_page=starting_page,
+            raw_pin_cite=raw_pin_cite,
+            court=court,
+            year=year,
+        )
