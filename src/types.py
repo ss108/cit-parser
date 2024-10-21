@@ -1,9 +1,19 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Dict, List, Literal, Optional, Protocol, Tuple, TypeAlias, Union
+from typing import (
+    Annotated,
+    Dict,
+    List,
+    Literal,
+    Optional,
+    Protocol,
+    Tuple,
+    TypeAlias,
+    Union,
+)
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 PIN_CITE: TypeAlias = Tuple[int, Optional[int]]
 SPAN: TypeAlias = Tuple[int, int]
@@ -189,7 +199,7 @@ class CaselawCitation(_Base_):
 
 
 class StatuteCitation(_Base_):
-    citation_type: CitationType = CitationType.STATUTE
+    citation_type: Literal[CitationType.STATUTE] = CitationType.STATUTE
 
     title: Optional[str] = None
     code: Optional[str] = None
@@ -289,33 +299,31 @@ class StatuteCitation(_Base_):
         )
 
 
-Citation: TypeAlias = Union[CaselawCitation, StatuteCitation]
+Citation: TypeAlias = Annotated[
+    Union[CaselawCitation, StatuteCitation], Field(discriminator="citation_type")
+]
 
 
-class Authorities(_Base_):
-    statutes: Dict[StatuteCitation, List[StatuteCitation]] = dict()
-    caselaw: Dict[CaselawCitation, List[CaselawCitation]] = dict()
+class Authorities(BaseModel):
+    caselaw: Dict[CaselawCitation, List[CaselawCitation]] = {}
+    statutes: Dict[StatuteCitation, List[StatuteCitation]] = {}
 
     @classmethod
     def construct(cls, citations: List[Citation]) -> Authorities:
-        statutes = {}
-        caselaw = {}
+        caselaw: Dict[CaselawCitation, List[CaselawCitation]] = {}
+        statutes: Dict[StatuteCitation, List[StatuteCitation]] = {}
 
-        # Separate full and short citations
         full_citations = [c for c in citations if c.is_full]
         short_citations = [c for c in citations if not c.is_full]
 
-        # Create the dictionary for full citations first.
         for full_citation in full_citations:
-            if isinstance(full_citation, CaselawCitation):
+            if full_citation.citation_type == CitationType.OPINION:
                 caselaw.setdefault(full_citation, []).append(full_citation)
-            elif isinstance(full_citation, StatuteCitation):
+            elif full_citation.citation_type == CitationType.STATUTE:
                 statutes.setdefault(full_citation, []).append(full_citation)
 
-        # Map short citations to the appropriate full citation.
         for short_citation in short_citations:
-            if isinstance(short_citation, CaselawCitation):
-                # Find a matching full citation.
+            if short_citation.citation_type == CitationType.OPINION:
                 for full_citation in caselaw:
                     if (
                         full_citation.case_name == short_citation.case_name
@@ -325,17 +333,8 @@ class Authorities(_Base_):
                     ):
                         caselaw[full_citation].append(short_citation)
                         break
-            elif isinstance(short_citation, StatuteCitation):
-                # Statutes mapping logic could be similar.
-                for full_citation in statutes:
-                    if (
-                        full_citation.section == short_citation.section
-                        and full_citation.code == short_citation.code
-                    ):
-                        statutes[full_citation].append(short_citation)
-                        break
 
-        return cls(statutes=statutes, caselaw=caselaw)
+        return cls(caselaw=caselaw, statutes=statutes)
 
     def __str__(self) -> str:
         return f"Statutes: {self.statutes}\nCaselaw: {self.caselaw}"
