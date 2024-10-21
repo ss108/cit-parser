@@ -9,65 +9,66 @@ from src.types import Authorities, CaselawCitation, StatuteCitation
     "citations, expected_statutes, expected_caselaw",
     [
         # # Test case: Both statutes and caselaw are present
-        # (
-        #     [
-        #         StatuteCitation(
-        #             title="18", code="U.S.C.", section="§ 3553", start=0, end=10
-        #         ),
-        #         StatuteCitation(
-        #             title="42", code="U.S.C.", section="§ 1983", start=20, end=30
-        #         ),
-        #         CaselawCitation(
-        #             case_name="Doe v. Smith",
-        #             volume=456,
-        #             reporter="F.2d",
-        #             starting_page=101,
-        #             court="D. Ct.",
-        #             year=2000,
-        #             start=40,
-        #             end=50,
-        #         ),
-        #     ],
-        #     {
-        #         StatuteCitation(
-        #             title="18", code="U.S.C.", section="§ 3553", start=0, end=10
-        #         ): [
-        #             StatuteCitation(
-        #                 title="18", code="U.S.C.", section="§ 3553", start=0, end=10
-        #             )
-        #         ],
-        #         StatuteCitation(
-        #             title="42", code="U.S.C.", section="§ 1983", start=20, end=30
-        #         ): [
-        #             StatuteCitation(
-        #                 title="42", code="U.S.C.", section="§ 1983", start=20, end=30
-        #             )
-        #         ],
-        #     },
-        #     {
-        #         CaselawCitation(
-        #             case_name="Doe v. Smith",
-        #             volume=456,
-        #             reporter="F.2d",
-        #             starting_page=101,
-        #             year=2000,
-        #             court="D. Ct.",
-        #             start=40,
-        #             end=50,
-        #         ): [
-        #             CaselawCitation(
-        #                 case_name="Doe v. Smith",
-        #                 volume=456,
-        #                 reporter="F.2d",
-        #                 starting_page=101,
-        #                 year=2000,
-        #                 court="D. Ct.",
-        #                 start=40,
-        #                 end=50,
-        #             )
-        #         ],
-        #     },
-        # ),
+        (
+            [
+                StatuteCitation(
+                    title="18", code="U.S.C.", section="§ 3553", start=0, end=10
+                ),
+                StatuteCitation(
+                    title="42", code="U.S.C.", section="§ 1983", start=20, end=30
+                ),
+                CaselawCitation(
+                    case_name="Doe v. Smith",
+                    volume=456,
+                    reporter="F.2d",
+                    starting_page=101,
+                    court="D. Ct.",
+                    year=2000,
+                    start=40,
+                    end=50,
+                ),
+            ],
+            {},
+            # {
+            #     StatuteCitation(
+            #         title="18", code="U.S.C.", section="§ 3553", start=0, end=10
+            #     ): [
+            #         StatuteCitation(
+            #             title="18", code="U.S.C.", section="§ 3553", start=0, end=10
+            #         )
+            #     ],
+            #     StatuteCitation(
+            #         title="42", code="U.S.C.", section="§ 1983", start=20, end=30
+            #     ): [
+            #         StatuteCitation(
+            #             title="42", code="U.S.C.", section="§ 1983", start=20, end=30
+            #         )
+            #     ],
+            # },
+            {
+                CaselawCitation(
+                    case_name="Doe v. Smith",
+                    volume=456,
+                    reporter="F.2d",
+                    starting_page=101,
+                    year=2000,
+                    court="D. Ct.",
+                    start=40,
+                    end=50,
+                ): [
+                    CaselawCitation(
+                        case_name="Doe v. Smith",
+                        volume=456,
+                        reporter="F.2d",
+                        starting_page=101,
+                        year=2000,
+                        court="D. Ct.",
+                        start=40,
+                        end=50,
+                    )
+                ],
+            },
+        ),
         # # Test case: Only caselaw citations
         (
             [
