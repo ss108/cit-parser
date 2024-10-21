@@ -41,6 +41,38 @@ def _is_statute_citation(entities: List[LabelPrediction]) -> bool:
     return has_section
 
 
+# def _construct_label(start: int) -> LabelPrediction:
+#     return LabelPrediction(token="", label="", start=start, end=start)
+
+
+# def _combine_labels(
+#     labels: List[LabelPrediction], original_text: str
+# ) -> Optional[LabelPrediction]:
+#     """
+#     Squash the labels to remove subword tokens and combine them into a single token.
+#     """
+#     if len(labels) == 0:
+#         return None
+
+#     conbine_label: LabelPrediction = labels[0]
+
+#     for x in labels[1:]:
+#         combine_label
+
+#         if token.startswith("##"):
+#             current_label.token += token[2:]
+#             current_label.end = end
+#         else:
+#             if current_label.token:
+#                 squashed.append(current_label)
+#             current_label = LabelPrediction(token=token, label=x, start=start, end=end)
+
+#     if current_label.token:
+#         squashed.append(current_label)
+
+#     return squashed
+
+
 def aggregate_entities(
     labels: List[LabelPrediction], original_text: str
 ) -> List[LabelPrediction]:
@@ -48,100 +80,89 @@ def aggregate_entities(
     Aggregate tokens into entities based on their labels, handling subwords and punctuation.
     Uses the original text for precise reconstruction of entities.
     """
-    aggregated = []
-    current_entity_tokens = []
-    current_label = None
-    current_start: Optional[int] = None
-    current_end: Optional[int] = None
+    current_start: int = 0
+    current_end: int = 0
+    VALID_CLASSIFICATIONS = {
+        "CASE_NAME",
+        "VOLUME",
+        "REPORTER",
+        "PAGE",
+        "COURT",
+        "SECTION",
+        "PIN",
+        "TITLE",
+        "CODE",
+        "YEAR",
+    }
 
-    for pair in labels:
-        token = pair.token
+    res: List[LabelPrediction] = []
+
+    current_label: Optional[str] = None
+
+    for i, pair in enumerate(labels):
         label = pair.label
+        token = pair.token
 
         if token in ["[CLS]", "[SEP]", "[PAD]"] or label == "O":
+            if current_label:
+                res.append(
+                    LabelPrediction(
+                        token=original_text[current_start:current_end].strip(),
+                        label=current_label,
+                        start=current_start,
+                        end=current_end,
+                    )
+                )
+            current_label = None
             continue
 
         if label.startswith("B-"):
-            label_type = label[2:]
+            classification = label[2:]
 
-            # Save the previous entity if exists and has valid start/end
-            if (
-                current_entity_tokens
-                and current_label
-                and current_start is not None
-                and current_end is not None
-            ):
-                # Construct the token from the original text using the spans
-                corrected_token = original_text[current_start:current_end].strip()
-                aggregated.append(
+            if classification not in VALID_CLASSIFICATIONS:
+                continue
+
+            if current_label:
+                res.append(
                     LabelPrediction(
-                        token=corrected_token,
+                        token=original_text[current_start:current_end].strip(),
                         label=current_label,
                         start=current_start,
                         end=current_end,
                     )
                 )
-                current_entity_tokens = []
-                current_start = None
-                current_end = None
 
-            current_label = label_type
-            current_entity_tokens.append(token.replace("##", ""))
+            current_label = classification
             current_start = pair.start
             current_end = pair.end
-        elif label.startswith("I-") and current_label == label[2:]:
-            # if len(current_entity_tokens) == 0:
-            #     raise ValueError(
-            #         f"Invalid sequence of labels: {current_label} followed by {label}"
-            #     )
-            # Continuation of the current entity
-            if token.startswith("##"):
-                current_entity_tokens.append(token[2:])
-            else:
-                current_entity_tokens.append(token)
 
-            # Update the end position
+        elif label.startswith("I-"):
+            if not current_label or label[2:] != current_label:
+                continue
+
             current_end = pair.end
         else:
-            # Handle any other case, end current entity
-            if (
-                current_entity_tokens
-                and current_label
-                and current_start is not None
-                and current_end is not None
-            ):
-                corrected_token = original_text[current_start:current_end].strip()
-                aggregated.append(
+            if current_label:
+                res.append(
                     LabelPrediction(
-                        token=corrected_token,
+                        token=original_text[current_start:current_end].strip(),
                         label=current_label,
                         start=current_start,
                         end=current_end,
                     )
                 )
-                current_entity_tokens = []
-                current_start = None
-                current_end = None
-                current_label = None
 
-    # Add the last entity if exists and has valid start/end
-    if (
-        current_entity_tokens
-        and current_label
-        and current_start is not None
-        and current_end is not None
-    ):
-        corrected_token = original_text[current_start:current_end].strip()
-        aggregated.append(
-            LabelPrediction(
-                token=corrected_token,
-                label=current_label,
-                start=current_start,
-                end=current_end,
+        if i == len(labels) - 1 and current_label is not None:
+            res.append(
+                LabelPrediction(
+                    token=original_text[current_start:current_end].strip(),
+                    label=current_label,
+                    start=current_start,
+                    end=current_end,
+                )
             )
-        )
 
-    return aggregated
+    return res
 
 
 def organize(cits: List[Citation]) -> Authorities:
