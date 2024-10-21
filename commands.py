@@ -17,7 +17,9 @@ def test():
     res = invoke(text)
 
     authorities = organize(res)
-    print(authorities)
+
+    for x in authorities.caselaw:
+        print(x.full_text)
 
 
 if __name__ == "__main__":

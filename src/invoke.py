@@ -90,7 +90,7 @@ def invoke(text: str) -> List[Citation]:
     res = []
     for sentence in sentences:
         predictions = infer_labels(sentence, model)
-        cit: Optional[Citation] = labels_to_cit(predictions)
+        cit: Optional[Citation] = labels_to_cit(predictions, sentence)
         if cit:
             res.append(cit)
     return res
@@ -117,10 +117,14 @@ def infer_labels(
 ) -> List[LabelPrediction]:
     """
     Tokenizes the text, performs inference with the model, and returns predicted labels
-    along with their character spans.
+    along with their character spans using offset mapping.
     """
     tokenizer: PreTrainedTokenizerFast = _get_tokenizer()
-    tokenized_input = tokenize(text)
+    # Tokenize with offset mapping to keep track of token positions
+    tokenized_input = tokenizer(
+        text, return_offsets_mapping=True, truncation=True, return_tensors="pt"
+    )
+    offset_mapping = tokenized_input.pop("offset_mapping")[0]
 
     model.to(DEVICE)  # pyright: ignore
     model.eval()  # pyright: ignore
@@ -135,19 +139,14 @@ def infer_labels(
 
     res = []
     raw_pairs = []
-    current_position = 0
 
-    for token, label in zip(tokens, predicted_labels):
-        if token in ["[CLS]", "[SEP]", "[PAD]"]:
+    for token, label, (start, end) in zip(
+        tokens, predicted_labels, offset_mapping.tolist()
+    ):
+        if token in ["[CLS]", "[SEP]", "[PAD]"] or label == "O" or start == end:
             continue
 
-        if token.startswith("##"):
-            token = token[2:]
-
-        start = text.find(token, current_position)
-        end = start + len(token)
-
-        current_position = end
+        token = token.replace("##", "")
 
         p = LabelPrediction(token=token, label=label, start=start, end=end)
         res.append(p)

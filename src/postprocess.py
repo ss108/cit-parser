@@ -1,4 +1,3 @@
-import string
 from typing import List, Optional
 
 from .types import (
@@ -10,8 +9,10 @@ from .types import (
 )
 
 
-def labels_to_cit(labels: List[LabelPrediction]) -> Optional[Citation]:
-    entities = aggregate_entities(labels)
+def labels_to_cit(
+    labels: List[LabelPrediction], original_text: str
+) -> Optional[Citation]:
+    entities = aggregate_entities(labels, original_text)
 
     if _is_caselaw_citation(entities):
         return CaselawCitation.from_token_label_pairs(entities)
@@ -40,9 +41,12 @@ def _is_statute_citation(entities: List[LabelPrediction]) -> bool:
     return has_section
 
 
-def aggregate_entities(labels: List[LabelPrediction]) -> List[LabelPrediction]:
+def aggregate_entities(
+    labels: List[LabelPrediction], original_text: str
+) -> List[LabelPrediction]:
     """
     Aggregate tokens into entities based on their labels, handling subwords and punctuation.
+    Uses the original text for precise reconstruction of entities.
     """
     aggregated = []
     current_entity_tokens = []
@@ -67,9 +71,11 @@ def aggregate_entities(labels: List[LabelPrediction]) -> List[LabelPrediction]:
                 and current_start is not None
                 and current_end is not None
             ):
+                # Construct the token from the original text using the spans
+                corrected_token = original_text[current_start:current_end].strip()
                 aggregated.append(
                     LabelPrediction(
-                        token="".join(current_entity_tokens),
+                        token=corrected_token,
                         label=current_label,
                         start=current_start,
                         end=current_end,
@@ -80,49 +86,22 @@ def aggregate_entities(labels: List[LabelPrediction]) -> List[LabelPrediction]:
                 current_end = None
 
             current_label = label_type
-            token = token.replace("##", "")
-            current_entity_tokens.append(token)
+            current_entity_tokens.append(token.replace("##", ""))
             current_start = pair.start
             current_end = pair.end
         elif label.startswith("I-") and current_label == label[2:]:
+            # if len(current_entity_tokens) == 0:
+            #     raise ValueError(
+            #         f"Invalid sequence of labels: {current_label} followed by {label}"
+            #     )
             # Continuation of the current entity
             if token.startswith("##"):
                 current_entity_tokens.append(token[2:])
-            elif token in string.punctuation:
-                if current_entity_tokens:
-                    current_entity_tokens[-1] += token
             else:
-                # Add a space before non-subword continuation tokens if needed
-                if not (len(token) == 1 and token.isupper()):
-                    if (
-                        current_entity_tokens
-                        and current_entity_tokens[-1].endswith(".")
-                        and token.isdigit()
-                    ):
-                        current_entity_tokens.append(token)
-                    elif (
-                        current_entity_tokens
-                        and current_entity_tokens[-1].isdigit()
-                        and token.islower()
-                    ):
-                        current_entity_tokens.append(token)
-                    else:
-                        current_entity_tokens.append(" " + token)
-                else:
-                    # If token is a single uppercase letter and previous token ends with a digit, add a space
-                    if (
-                        current_entity_tokens
-                        and current_entity_tokens[-1][-1].isdigit()
-                    ):
-                        current_entity_tokens.append(" " + token)
-                    else:
-                        current_entity_tokens.append(token)
+                current_entity_tokens.append(token)
 
-            # Update the start and end positions
-            if current_start is not None:
-                current_start = min(current_start, pair.start)
-            if current_end is not None:
-                current_end = max(current_end, pair.end)
+            # Update the end position
+            current_end = pair.end
         else:
             # Handle any other case, end current entity
             if (
@@ -131,9 +110,10 @@ def aggregate_entities(labels: List[LabelPrediction]) -> List[LabelPrediction]:
                 and current_start is not None
                 and current_end is not None
             ):
+                corrected_token = original_text[current_start:current_end].strip()
                 aggregated.append(
                     LabelPrediction(
-                        token="".join(current_entity_tokens),
+                        token=corrected_token,
                         label=current_label,
                         start=current_start,
                         end=current_end,
@@ -151,9 +131,10 @@ def aggregate_entities(labels: List[LabelPrediction]) -> List[LabelPrediction]:
         and current_start is not None
         and current_end is not None
     ):
+        corrected_token = original_text[current_start:current_end].strip()
         aggregated.append(
             LabelPrediction(
-                token="".join(current_entity_tokens),
+                token=corrected_token,
                 label=current_label,
                 start=current_start,
                 end=current_end,
