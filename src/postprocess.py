@@ -1,5 +1,5 @@
 import string
-from typing import List
+from typing import List, Optional
 
 from .types import LabelPrediction
 
@@ -11,46 +11,53 @@ def aggregate_entities(labels: List[LabelPrediction]) -> List[LabelPrediction]:
     aggregated = []
     current_entity_tokens = []
     current_label = None
+    current_start: Optional[int] = None
+    current_end: Optional[int] = None
 
     for pair in labels:
         token = pair.token
         label = pair.label
 
-        # Skip special tokens and 'O' labels
         if token in ["[CLS]", "[SEP]", "[PAD]"] or label == "O":
             continue
 
         if label.startswith("B-"):
-            # Start of a new entity
             label_type = label[2:]
 
-            # Save the previous entity if exists
-            if current_entity_tokens and current_label:
+            # Save the previous entity if exists and has valid start/end
+            if (
+                current_entity_tokens
+                and current_label
+                and current_start is not None
+                and current_end is not None
+            ):
                 aggregated.append(
                     LabelPrediction(
                         token="".join(current_entity_tokens),
                         label=current_label,
+                        start=current_start,
+                        end=current_end,
                     )
                 )
                 current_entity_tokens = []
+                current_start = None
+                current_end = None
 
-            # Initialize new entity
             current_label = label_type
             token = token.replace("##", "")
             current_entity_tokens.append(token)
+            current_start = pair.start
+            current_end = pair.end
         elif label.startswith("I-") and current_label == label[2:]:
             # Continuation of the current entity
             if token.startswith("##"):
-                # Subword token: concatenate directly
                 current_entity_tokens.append(token[2:])
             elif token in string.punctuation:
-                # Punctuation: attach directly to the last token
                 if current_entity_tokens:
                     current_entity_tokens[-1] += token
             else:
-                # Non-subword, non-punctuation: add with a space unless single uppercase
+                # Add a space before non-subword continuation tokens if needed
                 if not (len(token) == 1 and token.isupper()):
-                    # Check for special cases where space should not be added
                     if (
                         current_entity_tokens
                         and current_entity_tokens[-1].endswith(".")
@@ -67,24 +74,46 @@ def aggregate_entities(labels: List[LabelPrediction]) -> List[LabelPrediction]:
                         current_entity_tokens.append(" " + token)
                 else:
                     current_entity_tokens.append(token)
+
+            # Update the start and end positions
+            if current_start is not None:
+                current_start = min(current_start, pair.start)
+            if current_end is not None:
+                current_end = max(current_end, pair.end)
         else:
-            # Any other case, end current entity
-            if current_entity_tokens and current_label:
+            # Handle any other case, end current entity
+            if (
+                current_entity_tokens
+                and current_label
+                and current_start is not None
+                and current_end is not None
+            ):
                 aggregated.append(
                     LabelPrediction(
                         token="".join(current_entity_tokens),
                         label=current_label,
+                        start=current_start,
+                        end=current_end,
                     )
                 )
                 current_entity_tokens = []
+                current_start = None
+                current_end = None
                 current_label = None
 
-    # Append the last entity if exists
-    if current_entity_tokens and current_label:
+    # Add the last entity if exists and has valid start/end
+    if (
+        current_entity_tokens
+        and current_label
+        and current_start is not None
+        and current_end is not None
+    ):
         aggregated.append(
             LabelPrediction(
                 token="".join(current_entity_tokens),
                 label=current_label,
+                start=current_start,
+                end=current_end,
             )
         )
 

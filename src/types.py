@@ -31,6 +31,8 @@ class ICitation(Protocol):
 class LabelPrediction(BaseModel):
     token: str
     label: str
+    start: int
+    end: int
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, LabelPrediction):
@@ -95,5 +97,50 @@ class CaselawCitation(BaseModel):
             starting_page=starting_page,
             raw_pin_cite=raw_pin_cite,
             court=court,
+            year=year,
+        )
+
+
+class StatuteCitation(BaseModel):
+    title: Optional[str] = None
+    code: Optional[str] = None
+    section: Optional[str] = None
+    year: Optional[int] = None
+
+    @classmethod
+    def from_token_label_pairs(
+        cls, token_label_pairs: List[LabelPrediction]
+    ) -> Optional[StatuteCitation]:
+        title = ""
+        code = ""
+        section = ""
+        year = None
+
+        for pair in token_label_pairs:
+            token = pair.token
+            label = pair.label
+
+            if label == "TITLE":
+                title += token + " "
+            elif label == "CODE":
+                code += token + " "
+            elif label == "SECTION":
+                section += token + " "
+            elif label == "YEAR" and token.isdigit():
+                year = int(token)
+
+        # Trim whitespace
+        title = title.strip() or None
+        code = code.strip() or None
+        section = section.strip() or None
+
+        # Validate required fields
+        if not title and not code and not section:
+            return None
+
+        return cls(
+            title=title,
+            code=code,
+            section=section,
             year=year,
         )

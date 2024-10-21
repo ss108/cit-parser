@@ -113,7 +113,8 @@ def infer_labels(
     text: str, model: AutoModelForTokenClassification
 ) -> List[LabelPrediction]:
     """
-    Tokenizes the text, performs inference with the model, and returns predicted labels.
+    Tokenizes the text, performs inference with the model, and returns predicted labels
+    along with their character spans.
     """
     tokenizer: PreTrainedTokenizerFast = _get_tokenizer()
     tokenized_input = tokenize(text)
@@ -131,9 +132,24 @@ def infer_labels(
 
     res = []
     raw_pairs = []
+    current_position = 0
+
     for token, label in zip(tokens, predicted_labels):
-        raw_pairs.append((token, label))
-        p = LabelPrediction(token=token, label=label)
+        if token in ["[CLS]", "[SEP]", "[PAD]"]:
+            continue
+
+        if token.startswith("##"):
+            token = token[2:]
+
+        start = text.find(token, current_position)
+        end = start + len(token)
+
+        current_position = end
+
+        p = LabelPrediction(token=token, label=label, start=start, end=end)
         res.append(p)
+        raw_pairs.append((token, label, start, end))
+
+    msg.info(f"Token-label pairs with spans: {raw_pairs}")
 
     return res
