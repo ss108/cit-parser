@@ -21,6 +21,7 @@ package-dir = {"" = "src"}
 [tool.uv]
 dev-dependencies = [
     "pyright>=1.1.385",
+    "pytest>=8.3.3",
     "ruff>=0.7.0",
     "typer>=0.12.5",
 ]

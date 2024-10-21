@@ -12,7 +12,7 @@ def hi():
 
 @app.command()
 def test():
-    text = "Hello World. Cororo v. Yee, 515 U.S. 70 (1995). 18 U.S.C. Sec 87"
+    text = "Jojo, 45 F.3d at 87. Yeah, tha"
     res = invoke(text)
     print(res)
 
