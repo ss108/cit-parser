@@ -202,7 +202,19 @@ class StatuteCitation(_Base_):
 
     @property
     def is_full(self) -> bool:
-        return all([self.section])
+        return self.section is not None
+
+    def is_fuller_than(self, other: StatuteCitation) -> bool:
+        if self.section and not other.section:
+            return True
+        elif self.title and not other.title:
+            return True
+        elif self.code and not other.code:
+            return True
+        elif self.year and not other.year:
+            return True
+
+        return False
 
     @property
     def full_text(self) -> str:
@@ -300,8 +312,6 @@ class Authorities(BaseModel):
         caselaw: Dict[CaselawCitation, List[CaselawCitation]] = {}
         statutes: Dict[StatuteCitation, List[StatuteCitation]] = {}
 
-        print(f"Constructing authorities from {citations}")
-
         # Separate full and short citations
         full_citations = [c for c in citations if c.is_full]
         short_citations = [c for c in citations if not c.is_full]
@@ -316,7 +326,7 @@ class Authorities(BaseModel):
                     (k for k in statutes if k.section == full_citation.section), None
                 )
                 if existing_citation:
-                    if len(full_citation.full_text) > len(existing_citation.full_text):
+                    if full_citation.is_fuller_than(existing_citation):
                         # Replace the key if the new one is "fuller"
                         citations_list = statutes.pop(existing_citation)
                         statutes[full_citation] = citations_list + [full_citation]
