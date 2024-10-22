@@ -41,38 +41,6 @@ def _is_statute_citation(entities: List[LabelPrediction]) -> bool:
     return has_section
 
 
-# def _construct_label(start: int) -> LabelPrediction:
-#     return LabelPrediction(token="", label="", start=start, end=start)
-
-
-# def _combine_labels(
-#     labels: List[LabelPrediction], original_text: str
-# ) -> Optional[LabelPrediction]:
-#     """
-#     Squash the labels to remove subword tokens and combine them into a single token.
-#     """
-#     if len(labels) == 0:
-#         return None
-
-#     conbine_label: LabelPrediction = labels[0]
-
-#     for x in labels[1:]:
-#         combine_label
-
-#         if token.startswith("##"):
-#             current_label.token += token[2:]
-#             current_label.end = end
-#         else:
-#             if current_label.token:
-#                 squashed.append(current_label)
-#             current_label = LabelPrediction(token=token, label=x, start=start, end=end)
-
-#     if current_label.token:
-#         squashed.append(current_label)
-
-#     return squashed
-
-
 def aggregate_entities(
     labels: List[LabelPrediction], original_text: str
 ) -> List[LabelPrediction]:
@@ -82,6 +50,7 @@ def aggregate_entities(
     """
     current_start: int = 0
     current_end: int = 0
+
     VALID_CLASSIFICATIONS = {
         "CASE_NAME",
         "VOLUME",
