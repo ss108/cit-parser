@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from enum import Enum
+from itertools import chain
 from typing import (
     Annotated,
     Dict,
@@ -83,14 +84,14 @@ class CaselawCitation(_Base_):
                 self.volume,
                 self.reporter,
                 self.starting_page,
-                self.raw_court,
+                self.formatted_court,
                 self.year,
             ]
         )
 
     @property
     def full_text(self) -> str:
-        components = [self.case_name]
+        components = [f"{self.case_name},"]
 
         if self.volume:
             components.append(str(self.volume))
@@ -100,7 +101,11 @@ class CaselawCitation(_Base_):
             components.append(str(self.starting_page))
 
         if self.raw_pin_cite:
-            components.append(f"at {self.raw_pin_cite}")
+            if self.is_full:
+                components[-1] += ","
+                components.append(self.raw_pin_cite)
+            else:
+                components.append(f"at {self.raw_pin_cite}")
 
         if self.raw_court or self.year:
             parens_content = " ".join(
@@ -204,6 +209,20 @@ class StatuteCitation(_Base_):
     def is_full(self) -> bool:
         return self.section is not None
 
+    @property
+    def full_text(self) -> str:
+        components = []
+        if self.title:
+            components.append(self.title)
+        if self.code:
+            components.append(self.code)
+        if self.section:
+            components.append(f"§ {self.section}")
+        if self.year:
+            components.append(f"({self.year})")
+
+        return " ".join(components)
+
     def is_fuller_than(self, other: StatuteCitation) -> bool:
         if self.section and not other.section:
             return True
@@ -216,22 +235,22 @@ class StatuteCitation(_Base_):
 
         return False
 
-    @property
-    def full_text(self) -> str:
-        components = []
-        if self.title:
-            components.append(self.title)
-        if self.code:
-            components.append(self.code)
-        if self.section:
-            components.append(self.section)
-        if self.year:
-            components.append(f"({self.year})")
-
-        return " ".join(components)
-
     def __str__(self) -> str:
         return self.full_text
+
+    def __hash__(self) -> int:
+        return hash((self.code, self.section))
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, StatuteCitation):
+            return False
+
+        return (
+            self.title == other.title
+            and self.code == other.code
+            and self.section == other.section
+            and self.year == other.year
+        )
 
     @classmethod
     def from_token_label_pairs(
@@ -283,20 +302,6 @@ class StatuteCitation(_Base_):
             end=end,
         )
 
-    def __hash__(self) -> int:
-        return hash((self.code, self.section))
-
-    def __eq__(self, other: object) -> bool:
-        if not isinstance(other, StatuteCitation):
-            return False
-
-        return (
-            self.title == other.title
-            and self.code == other.code
-            and self.section == other.section
-            and self.year == other.year
-        )
-
 
 Citation: TypeAlias = Annotated[
     Union[CaselawCitation, StatuteCitation], Field(discriminator="citation_type")
@@ -306,6 +311,14 @@ Citation: TypeAlias = Annotated[
 class Authorities(BaseModel):
     caselaw: Dict[CaselawCitation, List[CaselawCitation]] = {}
     statutes: Dict[StatuteCitation, List[StatuteCitation]] = {}
+
+    def all(self, full_only: bool = False) -> List[Citation]:
+        if full_only:
+            return list(self.caselaw.keys()) + list(self.statutes.keys())
+        else:
+            return list(chain.from_iterable(self.caselaw.values())) + list(
+                chain.from_iterable(self.statutes.values())
+            )
 
     @classmethod
     def construct(cls, citations: List[Citation]) -> Authorities:

@@ -77,7 +77,7 @@ from src.cit_parser import Authorities, CaselawCitation, StatuteCitation
                     reporter="U.S.",
                     starting_page=113,
                     year=1973,
-                    raw_court="SCOTUS",
+                    raw_court=None,
                     start=0,
                     end=10,
                 ),
@@ -89,7 +89,7 @@ from src.cit_parser import Authorities, CaselawCitation, StatuteCitation
                     volume=410,
                     reporter="U.S.",
                     starting_page=113,
-                    raw_court="SCOTUS",
+                    raw_court=None,
                     year=1973,
                     start=0,
                     end=10,
@@ -101,7 +101,7 @@ from src.cit_parser import Authorities, CaselawCitation, StatuteCitation
                         starting_page=113,
                         year=1973,
                         start=0,
-                        raw_court="SCOTUS",
+                        raw_court=None,
                         end=10,
                     )
                 ]
