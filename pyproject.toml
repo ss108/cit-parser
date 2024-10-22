@@ -15,8 +15,7 @@ dependencies = [
 
 
 [tool.setuptools]
-packages = ["cit_parser"]
-package-dir = {"" = "src"}
+packages = ["src"]
 
 [tool.uv]
 dev-dependencies = [
