@@ -58,7 +58,7 @@ class CaselawCitation(_Base_):
     reporter: Optional[str] = None
     starting_page: Optional[int] = None
     raw_pin_cite: Optional[str] = None
-    court: Optional[str] = None
+    raw_court: Optional[str] = None
     year: Optional[int] = None
 
     start: int
@@ -69,6 +69,13 @@ class CaselawCitation(_Base_):
         return self.start, self.end
 
     @property
+    def formatted_court(self) -> Optional[str]:
+        # handle SCOTUS speshul
+        if self.reporter in {"U.S.", "S. Ct."}:
+            return "SCOTUS"
+        return self.raw_court
+
+    @property
     def is_full(self) -> bool:
         return all(
             [
@@ -76,7 +83,7 @@ class CaselawCitation(_Base_):
                 self.volume,
                 self.reporter,
                 self.starting_page,
-                self.court,
+                self.raw_court,
                 self.year,
             ]
         )
@@ -95,9 +102,9 @@ class CaselawCitation(_Base_):
         if self.raw_pin_cite:
             components.append(f"at {self.raw_pin_cite}")
 
-        if self.court or self.year:
+        if self.raw_court or self.year:
             parens_content = " ".join(
-                filter(None, [self.court, str(self.year) if self.year else None])
+                filter(None, [self.raw_court, str(self.year) if self.year else None])
             )
             components.append(f"({parens_content})")
 
@@ -156,7 +163,7 @@ class CaselawCitation(_Base_):
             reporter=reporter or None,
             starting_page=starting_page,
             raw_pin_cite=raw_pin_cite,
-            court=court,
+            raw_court=court,
             year=year,
             start=start,
             end=end,
@@ -173,7 +180,7 @@ class CaselawCitation(_Base_):
             self.volume == other.volume
             and self.reporter == other.reporter
             and self.starting_page == other.starting_page
-            and self.court == other.court
+            and self.raw_court == other.raw_court
             and self.year == other.year
         )
 
@@ -292,6 +299,8 @@ class Authorities(BaseModel):
     def construct(cls, citations: List[Citation]) -> Authorities:
         caselaw: Dict[CaselawCitation, List[CaselawCitation]] = {}
         statutes: Dict[StatuteCitation, List[StatuteCitation]] = {}
+
+        print(f"Constructing authorities from {citations}")
 
         # Separate full and short citations
         full_citations = [c for c in citations if c.is_full]

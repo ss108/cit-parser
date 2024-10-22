@@ -167,6 +167,6 @@ def infer_labels(
         res.append(p)
         raw_pairs.append((token, label, start, end))
 
-    msg.info(f"Token-label pairs with spans: {raw_pairs}")
+    # msg.info(f"Token-label pairs with spans: {raw_pairs}")
 
     return res

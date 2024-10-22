@@ -166,5 +166,4 @@ def aggregate_entities(
 
 
 def organize(cits: List[Citation]) -> Authorities:
-    print(f"Organizing {cits}")
     return Authorities.construct(cits)
