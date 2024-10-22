@@ -7,7 +7,6 @@ from typing import (
     List,
     Literal,
     Optional,
-    Protocol,
     Tuple,
     TypeAlias,
     Union,
@@ -49,29 +48,6 @@ class LabelPrediction(_Base_):
 
     def __str__(self):
         return f"{self.token}: {self.label}"
-
-
-class ICitation(Protocol):
-    start: int
-    end: int
-    type: CitationType
-
-    @classmethod
-    def from_token_label_pairs(
-        cls, token_label_pairs: list[LabelPrediction]
-    ) -> Optional[ICitation]: ...
-
-    @property
-    def full_text(self) -> str: ...
-
-    @property
-    def span(self) -> SPAN: ...
-
-    def __hash__(self) -> int: ...
-
-    def __eq__(self, other: object) -> bool: ...
-
-    def __str__(self) -> str: ...
 
 
 class CaselawCitation(_Base_):
@@ -219,7 +195,7 @@ class StatuteCitation(_Base_):
 
     @property
     def is_full(self) -> bool:
-        return all([self.code, self.section])
+        return all([self.section])
 
     @property
     def full_text(self) -> str:
