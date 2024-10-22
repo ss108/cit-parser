@@ -1,8 +1,10 @@
+import os
 from functools import lru_cache
 from typing import Dict, List, Optional
 
 import spacy
 import torch
+from pydantic import BaseModel
 from transformers import (
     AutoModelForTokenClassification,
     AutoTokenizer,
@@ -10,11 +12,21 @@ from transformers import (
 )
 from wasabi import msg
 
-from src.config import Config
-from src.constants import ALL_LABELS
-from src.postprocess import labels_to_cit
-
+from .constants import ALL_LABELS
+from .postprocess import labels_to_cit
 from .types import Citation, LabelPrediction
+
+
+class Configuration(BaseModel):
+    HF_MODEL_NAME: str = os.getenv("HF_MODEL_NAME", "ss108/legal-citation-bert")
+
+    MODEL_URL: Optional[str] = os.getenv("MODEL_URL")
+
+    class Config:
+        frozen = True
+
+
+Config = Configuration()
 
 
 def _get_device() -> torch.device:
@@ -155,6 +167,6 @@ def infer_labels(
         res.append(p)
         raw_pairs.append((token, label, start, end))
 
-    msg.info(f"Token-label pairs with spans: {raw_pairs}")
+    # msg.info(f"Token-label pairs with spans: {raw_pairs}")
 
     return res

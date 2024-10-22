@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 from enum import Enum
+from itertools import chain
 from typing import (
     Annotated,
     Dict,
     List,
     Literal,
     Optional,
-    Protocol,
     Tuple,
     TypeAlias,
     Union,
@@ -51,29 +51,6 @@ class LabelPrediction(_Base_):
         return f"{self.token}: {self.label}"
 
 
-class ICitation(Protocol):
-    start: int
-    end: int
-    type: CitationType
-
-    @classmethod
-    def from_token_label_pairs(
-        cls, token_label_pairs: list[LabelPrediction]
-    ) -> Optional[ICitation]: ...
-
-    @property
-    def full_text(self) -> str: ...
-
-    @property
-    def span(self) -> SPAN: ...
-
-    def __hash__(self) -> int: ...
-
-    def __eq__(self, other: object) -> bool: ...
-
-    def __str__(self) -> str: ...
-
-
 class CaselawCitation(_Base_):
     citation_type: Literal[CitationType.OPINION] = CitationType.OPINION
 
@@ -82,7 +59,7 @@ class CaselawCitation(_Base_):
     reporter: Optional[str] = None
     starting_page: Optional[int] = None
     raw_pin_cite: Optional[str] = None
-    court: Optional[str] = None
+    raw_court: Optional[str] = None
     year: Optional[int] = None
 
     start: int
@@ -93,6 +70,13 @@ class CaselawCitation(_Base_):
         return self.start, self.end
 
     @property
+    def formatted_court(self) -> Optional[str]:
+        # handle SCOTUS speshul
+        if self.reporter in {"U.S.", "S. Ct."}:
+            return "SCOTUS"
+        return self.raw_court
+
+    @property
     def is_full(self) -> bool:
         return all(
             [
@@ -100,14 +84,14 @@ class CaselawCitation(_Base_):
                 self.volume,
                 self.reporter,
                 self.starting_page,
-                self.court,
+                self.formatted_court,
                 self.year,
             ]
         )
 
     @property
     def full_text(self) -> str:
-        components = [self.case_name]
+        components = [f"{self.case_name},"]
 
         if self.volume:
             components.append(str(self.volume))
@@ -117,11 +101,15 @@ class CaselawCitation(_Base_):
             components.append(str(self.starting_page))
 
         if self.raw_pin_cite:
-            components.append(f"at {self.raw_pin_cite}")
+            if self.is_full:
+                components[-1] += ","
+                components.append(self.raw_pin_cite)
+            else:
+                components.append(f"at {self.raw_pin_cite}")
 
-        if self.court or self.year:
+        if self.raw_court or self.year:
             parens_content = " ".join(
-                filter(None, [self.court, str(self.year) if self.year else None])
+                filter(None, [self.raw_court, str(self.year) if self.year else None])
             )
             components.append(f"({parens_content})")
 
@@ -180,7 +168,7 @@ class CaselawCitation(_Base_):
             reporter=reporter or None,
             starting_page=starting_page,
             raw_pin_cite=raw_pin_cite,
-            court=court,
+            raw_court=court,
             year=year,
             start=start,
             end=end,
@@ -197,7 +185,7 @@ class CaselawCitation(_Base_):
             self.volume == other.volume
             and self.reporter == other.reporter
             and self.starting_page == other.starting_page
-            and self.court == other.court
+            and self.raw_court == other.raw_court
             and self.year == other.year
         )
 
@@ -219,7 +207,7 @@ class StatuteCitation(_Base_):
 
     @property
     def is_full(self) -> bool:
-        return all([self.code, self.section])
+        return self.section is not None
 
     @property
     def full_text(self) -> str:
@@ -229,14 +217,40 @@ class StatuteCitation(_Base_):
         if self.code:
             components.append(self.code)
         if self.section:
-            components.append(self.section)
+            components.append(f"§ {self.section}")
         if self.year:
             components.append(f"({self.year})")
 
         return " ".join(components)
 
+    def is_fuller_than(self, other: StatuteCitation) -> bool:
+        if self.section and not other.section:
+            return True
+        elif self.title and not other.title:
+            return True
+        elif self.code and not other.code:
+            return True
+        elif self.year and not other.year:
+            return True
+
+        return False
+
     def __str__(self) -> str:
         return self.full_text
+
+    def __hash__(self) -> int:
+        return hash((self.code, self.section))
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, StatuteCitation):
+            return False
+
+        return (
+            self.title == other.title
+            and self.code == other.code
+            and self.section == other.section
+            and self.year == other.year
+        )
 
     @classmethod
     def from_token_label_pairs(
@@ -288,20 +302,6 @@ class StatuteCitation(_Base_):
             end=end,
         )
 
-    def __hash__(self) -> int:
-        return hash((self.code, self.section))
-
-    def __eq__(self, other: object) -> bool:
-        if not isinstance(other, StatuteCitation):
-            return False
-
-        return (
-            self.title == other.title
-            and self.code == other.code
-            and self.section == other.section
-            and self.year == other.year
-        )
-
 
 Citation: TypeAlias = Annotated[
     Union[CaselawCitation, StatuteCitation], Field(discriminator="citation_type")
@@ -312,20 +312,44 @@ class Authorities(BaseModel):
     caselaw: Dict[CaselawCitation, List[CaselawCitation]] = {}
     statutes: Dict[StatuteCitation, List[StatuteCitation]] = {}
 
+    def all(self, full_only: bool = False) -> List[Citation]:
+        if full_only:
+            return list(self.caselaw.keys()) + list(self.statutes.keys())
+        else:
+            return list(chain.from_iterable(self.caselaw.values())) + list(
+                chain.from_iterable(self.statutes.values())
+            )
+
     @classmethod
     def construct(cls, citations: List[Citation]) -> Authorities:
         caselaw: Dict[CaselawCitation, List[CaselawCitation]] = {}
         statutes: Dict[StatuteCitation, List[StatuteCitation]] = {}
 
+        # Separate full and short citations
         full_citations = [c for c in citations if c.is_full]
         short_citations = [c for c in citations if not c.is_full]
 
+        # Add full citations directly
         for full_citation in full_citations:
             if full_citation.citation_type == CitationType.OPINION:
                 caselaw.setdefault(full_citation, []).append(full_citation)
-            # elif full_citation.citation_type == CitationType.STATUTE:
-            #     statutes.setdefault(full_citation, []).append(full_citation)
+            elif full_citation.citation_type == CitationType.STATUTE:
+                # Add or replace the existing statute with a fuller one
+                existing_citation = next(
+                    (k for k in statutes if k.section == full_citation.section), None
+                )
+                if existing_citation:
+                    if full_citation.is_fuller_than(existing_citation):
+                        # Replace the key if the new one is "fuller"
+                        citations_list = statutes.pop(existing_citation)
+                        statutes[full_citation] = citations_list + [full_citation]
+                    else:
+                        # Add to the existing citation list
+                        statutes[existing_citation].append(full_citation)
+                else:
+                    statutes[full_citation] = [full_citation]
 
+        # Map short citations to the appropriate full citation.
         for short_citation in short_citations:
             if short_citation.citation_type == CitationType.OPINION:
                 for full_citation in caselaw:
@@ -335,6 +359,18 @@ class Authorities(BaseModel):
                     ):
                         caselaw[full_citation].append(short_citation)
                         break
+            elif short_citation.citation_type == CitationType.STATUTE:
+                # Try to find a matching full citation by section.
+                matched = False
+                for full_citation in statutes:
+                    if full_citation.section == short_citation.section:
+                        statutes[full_citation].append(short_citation)
+                        matched = True
+                        break
+
+                # If no full citation is found, add it as its own key.
+                if not matched:
+                    statutes.setdefault(short_citation, []).append(short_citation)
 
         return cls(caselaw=caselaw, statutes=statutes)
 

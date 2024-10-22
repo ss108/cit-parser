@@ -2,8 +2,8 @@ from typing import List
 
 import pytest
 
-from src.postprocess import aggregate_entities
-from src.types import LabelPrediction
+from src.cit_parser import aggregate_entities
+from src.cit_parser.types import LabelPrediction
 
 
 @pytest.mark.parametrize(

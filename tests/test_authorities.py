@@ -2,7 +2,7 @@ from typing import List, Union
 
 import pytest
 
-from src.types import Authorities, CaselawCitation, StatuteCitation
+from src.cit_parser import Authorities, CaselawCitation, StatuteCitation
 
 
 @pytest.mark.parametrize(
@@ -22,29 +22,28 @@ from src.types import Authorities, CaselawCitation, StatuteCitation
                     volume=456,
                     reporter="F.2d",
                     starting_page=101,
-                    court="D. Ct.",
+                    raw_court="D. Ct.",
                     year=2000,
                     start=40,
                     end=50,
                 ),
             ],
-            {},
-            # {
-            #     StatuteCitation(
-            #         title="18", code="U.S.C.", section="§ 3553", start=0, end=10
-            #     ): [
-            #         StatuteCitation(
-            #             title="18", code="U.S.C.", section="§ 3553", start=0, end=10
-            #         )
-            #     ],
-            #     StatuteCitation(
-            #         title="42", code="U.S.C.", section="§ 1983", start=20, end=30
-            #     ): [
-            #         StatuteCitation(
-            #             title="42", code="U.S.C.", section="§ 1983", start=20, end=30
-            #         )
-            #     ],
-            # },
+            {
+                StatuteCitation(
+                    title="18", code="U.S.C.", section="§ 3553", start=0, end=10
+                ): [
+                    StatuteCitation(
+                        title="18", code="U.S.C.", section="§ 3553", start=0, end=10
+                    )
+                ],
+                StatuteCitation(
+                    title="42", code="U.S.C.", section="§ 1983", start=20, end=30
+                ): [
+                    StatuteCitation(
+                        title="42", code="U.S.C.", section="§ 1983", start=20, end=30
+                    )
+                ],
+            },
             {
                 CaselawCitation(
                     case_name="Doe v. Smith",
@@ -52,7 +51,7 @@ from src.types import Authorities, CaselawCitation, StatuteCitation
                     reporter="F.2d",
                     starting_page=101,
                     year=2000,
-                    court="D. Ct.",
+                    raw_court="D. Ct.",
                     start=40,
                     end=50,
                 ): [
@@ -62,7 +61,7 @@ from src.types import Authorities, CaselawCitation, StatuteCitation
                         reporter="F.2d",
                         starting_page=101,
                         year=2000,
-                        court="D. Ct.",
+                        raw_court="D. Ct.",
                         start=40,
                         end=50,
                     )
@@ -78,7 +77,7 @@ from src.types import Authorities, CaselawCitation, StatuteCitation
                     reporter="U.S.",
                     starting_page=113,
                     year=1973,
-                    court="SCOTUS",
+                    raw_court=None,
                     start=0,
                     end=10,
                 ),
@@ -90,7 +89,7 @@ from src.types import Authorities, CaselawCitation, StatuteCitation
                     volume=410,
                     reporter="U.S.",
                     starting_page=113,
-                    court="SCOTUS",
+                    raw_court=None,
                     year=1973,
                     start=0,
                     end=10,
@@ -102,34 +101,57 @@ from src.types import Authorities, CaselawCitation, StatuteCitation
                         starting_page=113,
                         year=1973,
                         start=0,
-                        court="SCOTUS",
+                        raw_court=None,
                         end=10,
                     )
                 ]
             },
         ),
-        # # # Test case: Only statute citations
-        # (
-        #     [
-        #         StatuteCitation(
-        #             title="28", code="U.S.C.", section="§ 1441", start=0, end=5
-        #         ),
-        #     ],
-        #     {
-        #         StatuteCitation(
-        #             title="28", code="U.S.C.", section="§ 1441", start=0, end=5
-        #         ): [
-        #             StatuteCitation(
-        #                 title="28", code="U.S.C.", section="§ 1441", start=0, end=5
-        #             )
-        #         ]
-        #     },
-        #     {},
-        # ),
+        # # Test case: Only statute citations
+        (
+            [
+                StatuteCitation(
+                    title="28", code="U.S.C.", section="§ 1441", start=0, end=5
+                ),
+            ],
+            {
+                StatuteCitation(
+                    title="28", code="U.S.C.", section="§ 1441", start=0, end=5
+                ): [
+                    StatuteCitation(
+                        title="28", code="U.S.C.", section="§ 1441", start=0, end=5
+                    )
+                ]
+            },
+            {},
+        ),
         # Test case: No citations (empty list)
         (
             [],
             {},
+            {},
+        ),
+        (
+            [
+                StatuteCitation(
+                    title=None, code="U.S.C.", section="§ 1441", start=0, end=4
+                ),
+                StatuteCitation(
+                    title="28", code="U.S.C.", section="§ 1441", start=0, end=5
+                ),
+            ],
+            {
+                StatuteCitation(
+                    title="28", code="U.S.C.", section="§ 1441", start=0, end=5
+                ): [
+                    StatuteCitation(
+                        title=None, code="U.S.C.", section="§ 1441", start=0, end=5
+                    ),
+                    StatuteCitation(
+                        title="28", code="U.S.C.", section="§ 1441", start=0, end=5
+                    ),
+                ]
+            },
             {},
         ),
     ],
@@ -155,7 +177,7 @@ def test_authorities_construct(
                     volume=67,
                     reporter="H. Rep.",
                     starting_page=99,
-                    court="H. Civ. Ct.",
+                    raw_court="H. Civ. Ct.",
                     year=1981,
                     start=0,
                     end=10,
@@ -175,7 +197,7 @@ def test_authorities_construct(
                     volume=67,
                     reporter="H. Rep.",
                     starting_page=99,
-                    court="H. Civ. Ct.",
+                    raw_court="H. Civ. Ct.",
                     year=1981,
                     start=0,
                     end=10,
