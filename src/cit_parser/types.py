@@ -293,15 +293,31 @@ class Authorities(BaseModel):
         caselaw: Dict[CaselawCitation, List[CaselawCitation]] = {}
         statutes: Dict[StatuteCitation, List[StatuteCitation]] = {}
 
+        # Separate full and short citations
         full_citations = [c for c in citations if c.is_full]
         short_citations = [c for c in citations if not c.is_full]
 
+        # Add full citations directly
         for full_citation in full_citations:
             if full_citation.citation_type == CitationType.OPINION:
                 caselaw.setdefault(full_citation, []).append(full_citation)
-            # elif full_citation.citation_type == CitationType.STATUTE:
-            #     statutes.setdefault(full_citation, []).append(full_citation)
+            elif full_citation.citation_type == CitationType.STATUTE:
+                # Add or replace the existing statute with a fuller one
+                existing_citation = next(
+                    (k for k in statutes if k.section == full_citation.section), None
+                )
+                if existing_citation:
+                    if len(full_citation.full_text) > len(existing_citation.full_text):
+                        # Replace the key if the new one is "fuller"
+                        citations_list = statutes.pop(existing_citation)
+                        statutes[full_citation] = citations_list + [full_citation]
+                    else:
+                        # Add to the existing citation list
+                        statutes[existing_citation].append(full_citation)
+                else:
+                    statutes[full_citation] = [full_citation]
 
+        # Map short citations to the appropriate full citation.
         for short_citation in short_citations:
             if short_citation.citation_type == CitationType.OPINION:
                 for full_citation in caselaw:
@@ -311,6 +327,18 @@ class Authorities(BaseModel):
                     ):
                         caselaw[full_citation].append(short_citation)
                         break
+            elif short_citation.citation_type == CitationType.STATUTE:
+                # Try to find a matching full citation by section.
+                matched = False
+                for full_citation in statutes:
+                    if full_citation.section == short_citation.section:
+                        statutes[full_citation].append(short_citation)
+                        matched = True
+                        break
+
+                # If no full citation is found, add it as its own key.
+                if not matched:
+                    statutes.setdefault(short_citation, []).append(short_citation)
 
         return cls(caselaw=caselaw, statutes=statutes)
 

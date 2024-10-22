@@ -28,23 +28,22 @@ from src.cit_parser import Authorities, CaselawCitation, StatuteCitation
                     end=50,
                 ),
             ],
-            {},
-            # {
-            #     StatuteCitation(
-            #         title="18", code="U.S.C.", section="§ 3553", start=0, end=10
-            #     ): [
-            #         StatuteCitation(
-            #             title="18", code="U.S.C.", section="§ 3553", start=0, end=10
-            #         )
-            #     ],
-            #     StatuteCitation(
-            #         title="42", code="U.S.C.", section="§ 1983", start=20, end=30
-            #     ): [
-            #         StatuteCitation(
-            #             title="42", code="U.S.C.", section="§ 1983", start=20, end=30
-            #         )
-            #     ],
-            # },
+            {
+                StatuteCitation(
+                    title="18", code="U.S.C.", section="§ 3553", start=0, end=10
+                ): [
+                    StatuteCitation(
+                        title="18", code="U.S.C.", section="§ 3553", start=0, end=10
+                    )
+                ],
+                StatuteCitation(
+                    title="42", code="U.S.C.", section="§ 1983", start=20, end=30
+                ): [
+                    StatuteCitation(
+                        title="42", code="U.S.C.", section="§ 1983", start=20, end=30
+                    )
+                ],
+            },
             {
                 CaselawCitation(
                     case_name="Doe v. Smith",
@@ -108,28 +107,51 @@ from src.cit_parser import Authorities, CaselawCitation, StatuteCitation
                 ]
             },
         ),
-        # # # Test case: Only statute citations
-        # (
-        #     [
-        #         StatuteCitation(
-        #             title="28", code="U.S.C.", section="§ 1441", start=0, end=5
-        #         ),
-        #     ],
-        #     {
-        #         StatuteCitation(
-        #             title="28", code="U.S.C.", section="§ 1441", start=0, end=5
-        #         ): [
-        #             StatuteCitation(
-        #                 title="28", code="U.S.C.", section="§ 1441", start=0, end=5
-        #             )
-        #         ]
-        #     },
-        #     {},
-        # ),
+        # # Test case: Only statute citations
+        (
+            [
+                StatuteCitation(
+                    title="28", code="U.S.C.", section="§ 1441", start=0, end=5
+                ),
+            ],
+            {
+                StatuteCitation(
+                    title="28", code="U.S.C.", section="§ 1441", start=0, end=5
+                ): [
+                    StatuteCitation(
+                        title="28", code="U.S.C.", section="§ 1441", start=0, end=5
+                    )
+                ]
+            },
+            {},
+        ),
         # Test case: No citations (empty list)
         (
             [],
             {},
+            {},
+        ),
+        (
+            [
+                StatuteCitation(
+                    title=None, code="U.S.C.", section="§ 1441", start=0, end=4
+                ),
+                StatuteCitation(
+                    title="28", code="U.S.C.", section="§ 1441", start=0, end=5
+                ),
+            ],
+            {
+                StatuteCitation(
+                    title="28", code="U.S.C.", section="§ 1441", start=0, end=5
+                ): [
+                    StatuteCitation(
+                        title=None, code="U.S.C.", section="§ 1441", start=0, end=5
+                    ),
+                    StatuteCitation(
+                        title="28", code="U.S.C.", section="§ 1441", start=0, end=5
+                    ),
+                ]
+            },
             {},
         ),
     ],
