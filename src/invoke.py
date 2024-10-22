@@ -120,6 +120,7 @@ def infer_labels(
     along with their character spans using offset mapping.
     """
     tokenizer: PreTrainedTokenizerFast = _get_tokenizer()
+
     # Tokenize with offset mapping to keep track of token positions
     tokenized_input = tokenizer(
         text, return_offsets_mapping=True, truncation=True, return_tensors="pt"
@@ -128,7 +129,6 @@ def infer_labels(
     # Extract offset mapping before moving tensors to device
     offset_mapping = tokenized_input.pop("offset_mapping")[0].tolist()
 
-    # Move input tensors to the same device as the model
     tokenized_input = {k: v.to(DEVICE) for k, v in tokenized_input.items()}
 
     model.to(DEVICE)  # pyright: ignore
