@@ -19,6 +19,7 @@ where = ["src"]
 
 [tool.uv]
 dev-dependencies = [
+    "build>=1.2.2.post1",
     "pyright>=1.1.385",
     "pytest>=8.3.3",
     "ruff>=0.7.0",
