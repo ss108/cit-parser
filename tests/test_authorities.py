@@ -2,7 +2,7 @@ from typing import List, Union
 
 import pytest
 
-from src.types import Authorities, CaselawCitation, StatuteCitation
+from src.cit_parser import Authorities, CaselawCitation, StatuteCitation
 
 
 @pytest.mark.parametrize(

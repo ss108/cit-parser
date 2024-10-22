@@ -10,10 +10,9 @@ from transformers import (
 )
 from wasabi import msg
 
-from src.config import Config
-from src.constants import ALL_LABELS
-from src.postprocess import labels_to_cit
-
+from .config import Config
+from .constants import ALL_LABELS
+from .postprocess import labels_to_cit
 from .types import Citation, LabelPrediction
 
 

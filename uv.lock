@@ -138,6 +138,7 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "build", specifier = ">=1.2.2.post1" },
+    { name = "cit-parser", virtual = "." },
     { name = "pyright", specifier = ">=1.1.385" },
     { name = "pytest", specifier = ">=8.3.3" },
     { name = "ruff", specifier = ">=0.7.0" },

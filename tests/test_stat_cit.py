@@ -2,7 +2,7 @@ from typing import List
 
 import pytest
 
-from src.types import (
+from src.cit_parser import (
     LabelPrediction,
     StatuteCitation,
 )
